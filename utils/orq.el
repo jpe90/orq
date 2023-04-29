@@ -69,7 +69,6 @@
               (set-marker (make-marker) (region-end))
             (point-max)))
          (orq-buffer (current-buffer))
-         ;; let var "full-prompt" be the entire contents of orq-buffer
          (full-prompt (buffer-substring-no-properties (point-min) (point-max))))
     (funcall
      #'orq-get-response
@@ -79,14 +78,11 @@
 
 (defun orq--get-args ()
   "Produce list of arguments for calling orq."
-  ;; return a string with the value "--system" followed by a space, followed by orq-system-prompt, folowed by a space, followed by buffer-content
   (list "--system" orq-system-prompt))
 
 ;;;###autoload
 (defun orq-get-response (args &optional callback)
     (let* ((orq-args (orq--get-args))
-           ;; we do not want to use start-process because apparently call-process-region has
-           ;; the capability to specify its input
            (process (apply #'start-process "orq"
                            (generate-new-buffer "*orq-proc*") "orq" orq-args))
            (prompt (plist-get args :prompt)))
@@ -95,13 +91,11 @@
           (erase-buffer)))
       (with-current-buffer (process-buffer process)
         (set-process-query-on-exit-flag process nil)
-        ;; set callback to stream insert respond
-        ;; then in stream filter you run the callback
         (setf (alist-get process orq--process-alist) args)
         (set-process-sentinel process #'orq--stream-cleanup)
         (set-process-filter process #'orq--stream-filter)
         (process-send-string process prompt)
-        ;; close the input stream
+        ;; i have no idea why i need to call this twice
         (process-send-eof process)
         (process-send-eof process)
         )))
